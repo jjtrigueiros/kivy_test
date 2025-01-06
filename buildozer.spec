@@ -14,6 +14,6 @@ android.sdk_build_tools = 33.0.0
 android.minapi = 21
 android.accept_sdk_license = True
 android.arch = arm64-v8a
-android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE
+android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.modules = org.kivy.camera
 android.logcat_filters = *:S python:D
