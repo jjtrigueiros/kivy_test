@@ -5,7 +5,7 @@ package.domain = org.jjtrig
 version = 0.1.0
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-requirements = python3,kivy
+requirements = python3,kivy,android,numpy,opencv
 orientation = portrait
 
 android.sdk = 33
