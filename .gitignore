@@ -9,5 +9,8 @@ wheels/
 # Virtual environments
 .venv
 
+# Project-specific stuff
 .buildozer
 bin/
+.*cache/
+_*cache/
