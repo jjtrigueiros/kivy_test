@@ -30,3 +30,6 @@ To create an APK for your target release, run:
 To send the app to your phone for debugging, (ensure your device architecture is in agreement with the buildozer.spec) connect your device with usb debugging on and file transfer enabled and then run:
 `uv run buildozer android debug deploy run`
 
+To check the application logs from your debug device:
+`uv run buildozer android logcat`
+
