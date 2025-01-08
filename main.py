@@ -25,8 +25,10 @@ class MyCamera(Camera):
     def on_tex(self, camera):
         texture = camera.texture
         img = texture_to_opencv(texture.get_region(0, 0, texture.width, texture.height))
+        if platform == 'android':
+            img = np.rot90(img, 3)
         self.opencv_frame = img
-        texture = opencv_to_texture(np.rot90(img, 3))
+        texture = opencv_to_texture(img)
         self.texture = texture
         self.texture_size = list(texture.size)
 
@@ -75,33 +77,46 @@ class MainApp(App):
         self.permission_granted = False
 
     def build(self):
-        # Create the main layout
-        layout = BoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20))
+        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(10))
 
         # Add a title label
         self.title_label = Label(
-            text="Quad Detector", font_size=dp(32), size_hint_y=None, height=dp(60)
+            text="Quad Detector",
+            font_size=dp(24),
+            size_hint_y=None,
+            height=dp(50),
+            color=(1, 1, 1, 1),
+            bold=True,
         )
 
         # Placeholder for camera
-        self.camera_layout = BoxLayout(size_hint=(1, 0.8))
+        self.camera_layout = BoxLayout(size_hint=(1, 1), padding=dp(10))
+
         self.camera_placeholder = Label(text="Initializing camera...", font_size=dp(20))
         self.camera_layout.add_widget(self.camera_placeholder)
 
-        # Add capture button
+        # Capture button
         self.capture_button = Button(
-            text="Take Photo",
+            text="Capture",
             size_hint_y=None,
-            height=dp(70),
-            font_size=dp(24),
+            height=dp(50),
             background_color=(0.2, 0.6, 1, 1),
+            color=(1, 1, 1, 1),
+            bold=True,
+            border=(dp(2), dp(2), dp(2), dp(2)),
+            background_normal="",
+            background_down="",
         )
         self.capture_button.bind(on_press=self.take_photo)
         self.capture_button.disabled = True
 
         # Status label
         self.status_label = Label(
-            text="", font_size=dp(20), size_hint_y=None, height=dp(40)
+            text="",
+            font_size=dp(20),
+            size_hint_y=None,
+            height=dp(40),
+            color=(1, 1, 1, 1),
         )
 
         # Add widgets to layout
