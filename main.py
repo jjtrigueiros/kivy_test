@@ -8,7 +8,6 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.logger import Logger
 from kivy.utils import platform
-from kivy.graphics import Rotate, PushMatrix, PopMatrix
 from kivy.graphics.texture import Texture
 import cv2
 import numpy as np
@@ -19,37 +18,22 @@ class MyCamera(Camera):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        with self.canvas.before:
-            PushMatrix()
-            self.rot = Rotate()
-            self.rot.angle = (
-                -90 if platform == "android" else 0
-            )  # Rotate only on Android
-            self.rot.origin = self.center
-            self.rot.axis = (0, 0, 1)
-        with self.canvas.after:
-            PopMatrix()
 
-        # self.current_frame = None
+        self.opencv_frame = None
         Clock.schedule_interval(self.process_frame, 1.0 / 30.0)
-
-    def on_size(self, instance, value):
-        """Update rotation origin when size changes"""
-        self.rot.origin = self.center
 
     def on_tex(self, camera):
         texture = camera.texture
-        img = texture_to_opencv(texture)
-        # self.current_frame = img
-        tex = opencv_to_texture(img)
-        self.texture = tex
-        self.texture_size = list(tex.size)
-
-        Logger.info("Hi!!!!")
+        img = texture_to_opencv(texture.get_region(0, 0, texture.width, texture.height))
+        self.opencv_frame = img
+        texture = opencv_to_texture(np.rot90(img, 3))
+        self.texture = texture
+        self.texture_size = list(texture.size)
 
     def process_frame(self, dt):
         self.canvas.ask_update()
-        # self.display_frame(self.current_frame)
+        if platform != 'android':
+            self.display_frame(self.opencv_frame)
 
     def display_frame(self, frame):
         """Display the current frame using cv2.imshow"""
@@ -60,27 +44,27 @@ class MyCamera(Camera):
 
 def texture_to_opencv(tex: Texture) -> np.ndarray:
     """
-    Convert a Kivy texture to an OpenCV-compatible numpy array.
-    Complementary to opencv_to_texture.
+    Convert a Kivy texture (RGBA) to an OpenCV-compatible numpy array (BGRA).
+    Complement of opencv_to_texture.
     """
-    arr = np.frombuffer(tex.pixels, dtype=np.uint8).reshape(tex.height, tex.width, 4)
+    # This orients the texture correctly, or else the result will be flipped depending on tex.uvpos and tex.uvsize.
+    tex_region = tex.get_region(0, 0, tex.width, tex.height)
+    arr = np.frombuffer(tex_region.pixels, dtype=np.uint8).reshape(tex.height, tex.width, 4)
     return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
 
 
 def opencv_to_texture(mat: np.ndarray) -> Texture:
     """
-    Convert an OpenCV-compatible numpy array to a Kivy texture.
-    Complementary to texture_to_opencv.
+    Convert an OpenCV-compatible numpy array (BGRA) to a Kivy texture (RGBA).
+    Complement of texture_to_opencv.
     """
     height, width = mat.shape[:2]
-    data = cv2.cvtColor(mat, cv2.COLOR_BGRA2RGBA).tobytes()
+    mat_rgba = cv2.cvtColor(mat, cv2.COLOR_BGRA2RGBA)
+    mat_rgba_vflipped = cv2.flip(mat_rgba, 0)
+    data = mat_rgba_vflipped.tobytes()
+
     tex = Texture.create(size=(width, height), colorfmt="rgba")
     tex.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgba")
-    # We need to flip the texture vertically to match Kivy's coordinate system.
-    # Flipping using Kivy makes it so that tex.tex_coords are equal to the original input.
-    # This makes it so that opencv_to_texture and texture_to_opencv are complementary for the expected case, but
-    # ideally the function would be aware of the Kivy orientation so that they would be truly complementar.
-    tex.flip_vertical()
     return tex
 
 
