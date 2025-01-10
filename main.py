@@ -1,3 +1,4 @@
+import sys
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -84,7 +85,7 @@ def texture_to_opencv(tex: Texture) -> np.ndarray:
     # This orients the texture correctly, or else the result will be flipped depending on tex.uvpos and tex.uvsize.
     tex_region = tex.get_region(0, 0, tex.width, tex.height)
     arr = np.frombuffer(tex_region.pixels, dtype=np.uint8).reshape(tex.height, tex.width, 4)
-    return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+    return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
 
 
 def opencv_to_texture(mat: np.ndarray) -> Texture:
@@ -93,7 +94,7 @@ def opencv_to_texture(mat: np.ndarray) -> Texture:
     Complement of texture_to_opencv.
     """
     height, width = mat.shape[:2]
-    mat_rgba = cv2.cvtColor(mat, cv2.COLOR_BGRA2RGBA)
+    mat_rgba = cv2.cvtColor(mat, cv2.COLOR_BGR2RGBA)
     mat_rgba_vflipped = cv2.flip(mat_rgba, 0)
     data = mat_rgba_vflipped.tobytes()
 
