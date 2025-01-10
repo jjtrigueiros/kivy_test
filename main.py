@@ -14,8 +14,8 @@ import cv2
 import numpy as np
 
 
-class MyCamera(Camera):
-    """Camera widget that can be rotated"""
+class CVCamera(Camera):
+    """Camera widget that performs some OpenCV processing on the camera frames"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -31,13 +31,13 @@ class MyCamera(Camera):
         print(dt)
         tex = self.texture
         img = texture_to_opencv(tex.get_region(0, 0, tex.width, tex.height))
-        if platform == 'android':
+        if platform == "android":
             img = np.rot90(img, 3)
         img = detect_quadrilateral(img)
         self.opencv_frame = img
 
         self.texture = opencv_to_texture(img)
-        if platform != 'android':
+        if platform != "android":
             self.display_frame(self.opencv_frame)
         self.canvas.ask_update()
 
@@ -46,6 +46,7 @@ class MyCamera(Camera):
         if frame is not None:
             cv2.imshow("Camera Frame", frame)
             cv2.waitKey(1)  # Add a short delay to allow the image to be displayed
+
 
 def detect_quadrilateral(frame: np.ndarray) -> np.ndarray:
     """Detect and draw the largest quadrilateral in the frame"""
@@ -56,7 +57,9 @@ def detect_quadrilateral(frame: np.ndarray) -> np.ndarray:
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         edges = cv2.Canny(blurred, 30, 150)
 
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         largest_contour = max(contours, key=cv2.contourArea)
 
         peri = cv2.arcLength(largest_contour, True)
@@ -77,6 +80,7 @@ def detect_quadrilateral(frame: np.ndarray) -> np.ndarray:
         Logger.error(f"OpenCV error: {message}")
         return frame
 
+
 def texture_to_opencv(tex: Texture) -> np.ndarray:
     """
     Convert a Kivy texture (RGBA) to an OpenCV-compatible numpy array (BGRA).
@@ -84,7 +88,9 @@ def texture_to_opencv(tex: Texture) -> np.ndarray:
     """
     # This orients the texture correctly, or else the result will be flipped depending on tex.uvpos and tex.uvsize.
     tex_region = tex.get_region(0, 0, tex.width, tex.height)
-    arr = np.frombuffer(tex_region.pixels, dtype=np.uint8).reshape(tex.height, tex.width, 4)
+    arr = np.frombuffer(tex_region.pixels, dtype=np.uint8).reshape(
+        tex.height, tex.width, 4
+    )
     return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
 
 
@@ -201,7 +207,7 @@ class MainApp(App):
                 return
 
             # Create new camera instance using CVCamera
-            self.camera = MyCamera(resolution=(1920, 1080), play=True, size_hint=(1, 1))
+            self.camera = CVCamera(resolution=(1920, 1080), play=True, size_hint=(1, 1))
 
             # Clear the camera layout and add the new camera
             self.camera_layout.clear_widgets()
