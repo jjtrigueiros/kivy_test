@@ -23,19 +23,22 @@ class MyCamera(Camera):
         Clock.schedule_interval(self.process_frame, 1.0 / 30.0)
 
     def on_tex(self, camera):
-        texture = camera.texture
-        img = texture_to_opencv(texture.get_region(0, 0, texture.width, texture.height))
-        if platform == 'android':
-            img = np.rot90(img, 3)
-        self.opencv_frame = img
-        texture = opencv_to_texture(img)
-        self.texture = texture
+        self.texture = texture = camera.texture
         self.texture_size = list(texture.size)
 
     def process_frame(self, dt):
-        self.canvas.ask_update()
+        print(dt)
+        tex = self.texture
+        img = texture_to_opencv(tex.get_region(0, 0, tex.width, tex.height))
+        if platform == 'android':
+            img = np.rot90(img, 3)
+        img = detect_quadrilateral(img)
+        self.opencv_frame = img
+
+        self.texture = opencv_to_texture(img)
         if platform != 'android':
             self.display_frame(self.opencv_frame)
+        self.canvas.ask_update()
 
     def display_frame(self, frame):
         """Display the current frame using cv2.imshow"""
@@ -43,6 +46,35 @@ class MyCamera(Camera):
             cv2.imshow("Camera Frame", frame)
             cv2.waitKey(1)  # Add a short delay to allow the image to be displayed
 
+def detect_quadrilateral(frame: np.ndarray) -> np.ndarray:
+    """Detect and draw the largest quadrilateral in the frame"""
+    try:
+        # due to a conversion error in Android, we need to explicitly convert the frame to UMat
+        frame_umat = cv2.UMat(frame)
+        gray = cv2.cvtColor(frame_umat, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blurred, 30, 150)
+
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        largest_contour = max(contours, key=cv2.contourArea)
+
+        peri = cv2.arcLength(largest_contour, True)
+        approx = cv2.approxPolyDP(largest_contour, 0.02 * peri, True)
+        approx_np = approx.get()  # Convert UMat to numpy.ndarray before checking length
+
+        # If largest contour is a quadrilateral (4 points)
+        if len(approx_np) == 4:
+            cv2.drawContours(frame_umat, [approx], -1, (0, 255, 0), 2)
+            for point in approx_np:
+                cv2.circle(frame_umat, tuple(point[0]), 5, (0, 255, 255), -1)
+
+        # Convert back to numpy.ndarray
+        return frame_umat.get()
+
+    except Exception as e:
+        message = f"Traceback: line {sys.exc_info()[-1].tb_lineno} - {str(e)}"
+        Logger.error(f"OpenCV error: {message}")
+        return frame
 
 def texture_to_opencv(tex: Texture) -> np.ndarray:
     """
